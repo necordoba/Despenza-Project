@@ -1,27 +1,89 @@
-import { useState, useMemo } from 'react';
-import { Plus, Search, SlidersHorizontal, Package, Download } from 'lucide-react';
+import { useState, useMemo, useRef } from 'react';
+import { Plus, Search, SlidersHorizontal, Package, Upload, FileDown } from 'lucide-react';
 import { usePantry } from '../contexts/PantryContext';
-import type { Product, Category } from '../types';
-import { CATEGORIES, getExpirationStatus } from '../types';
+import type { Product, Category, Unit } from '../types';
+import { CATEGORIES, UNITS, getExpirationStatus } from '../types';
 import ProductCard from '../components/pantry/ProductCard';
 import ProductForm from '../components/pantry/ProductForm';
-import { SEED_PRODUCTS } from '../data/seedProducts';
 
 type Filter = 'todos' | 'bajo' | 'vencidos' | 'proximos';
+
+const VALID_CATEGORIES = Object.keys(CATEGORIES) as Category[];
+const CSV_TEMPLATE = `nombre,categoria,cantidad,unidad,stock_minimo,vencimiento,notas
+Arroz,granos,5000,g,2000,,
+Leche,lacteos,2,l,1,2025-12-31,Entera
+Acetaminofén,medicina,2,unidades,1,,`;
+
+function downloadTemplate() {
+  const blob = new Blob([CSV_TEMPLATE], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'plantilla_despensa.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function PantryPage() {
   const { products, loadingProducts, addProduct } = usePantry();
   const [showForm, setShowForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | undefined>();
   const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ ok: number; errors: string[] } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function handleImport() {
-    if (!confirm(`¿Importar ${SEED_PRODUCTS.length} productos del inventario inicial? Esto no borrará lo que ya tienes.`)) return;
-    setImporting(true);
-    for (const p of SEED_PRODUCTS) {
-      await addProduct(p);
+  async function handleCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!fileInputRef.current) return;
+    fileInputRef.current.value = '';
+    if (!file) return;
+
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    const rows = lines.slice(1);
+
+    if (rows.length === 0) {
+      setImportResult({ ok: 0, errors: ['El archivo está vacío o solo tiene encabezados.'] });
+      return;
     }
+
+    setImporting(true);
+    let ok = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const cols = rows[i].split(',').map(c => c.trim());
+      const [nombre, categoria, cantidad, unidad, stockMinimo, vencimiento, ...notasParts] = cols;
+      const lineNum = i + 2;
+
+      if (!nombre) { errors.push(`Línea ${lineNum}: nombre vacío.`); continue; }
+      if (!VALID_CATEGORIES.includes(categoria as Category)) {
+        errors.push(`Línea ${lineNum}: categoría "${categoria}" inválida.`); continue;
+      }
+      if (!UNITS.includes(unidad as Unit)) {
+        errors.push(`Línea ${lineNum}: unidad "${unidad}" inválida.`); continue;
+      }
+      const qty = parseFloat(cantidad);
+      const min = parseFloat(stockMinimo);
+      if (isNaN(qty) || isNaN(min)) {
+        errors.push(`Línea ${lineNum}: cantidad o stock mínimo no es un número.`); continue;
+      }
+
+      await addProduct({
+        name: nombre,
+        category: categoria as Category,
+        quantity: qty,
+        unit: unidad as Unit,
+        minStock: min,
+        usedQuantity: 0,
+        expirationDate: vencimiento || undefined,
+        notes: notasParts.join(',') || undefined,
+      });
+      ok++;
+    }
+
     setImporting(false);
+    setImportResult({ ok, errors });
   }
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'todas'>('todas');
@@ -61,28 +123,57 @@ export default function PantryPage() {
   return (
     <div className="px-6 pt-8 pb-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Despensa</h1>
           <p className="text-gray-500 text-sm mt-0.5">{products.length} producto{products.length !== 1 ? 's' : ''}</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Agregar producto
-        </button>
-        <button
-          onClick={handleImport}
-          disabled={importing}
-          title="Importar inventario inicial del PDF"
-          className="flex items-center gap-2 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-        >
-          <Download className="w-4 h-4" />
-          {importing ? 'Importando...' : 'Importar plantilla'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={downloadTemplate}
+            title="Descargar plantilla CSV"
+            className="flex items-center gap-2 border border-gray-200 text-gray-600 hover:bg-gray-50 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+          >
+            <FileDown className="w-4 h-4" />
+            Plantilla CSV
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="flex items-center gap-2 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            {importing ? 'Importando...' : 'Importar CSV'}
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Agregar producto
+          </button>
+        </div>
       </div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        className="hidden"
+        onChange={handleCsvFile}
+      />
+
+      {/* Import result banner */}
+      {importResult && (
+        <div className={`rounded-xl px-4 py-3 mb-4 text-sm ${importResult.errors.length === 0 ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-amber-50 border border-amber-200 text-amber-800'}`}>
+          <p className="font-semibold mb-1">
+            {importResult.ok} producto{importResult.ok !== 1 ? 's' : ''} importado{importResult.ok !== 1 ? 's' : ''} correctamente.
+          </p>
+          {importResult.errors.map((e, i) => <p key={i} className="text-xs">{e}</p>)}
+          <button onClick={() => setImportResult(null)} className="text-xs underline mt-1">Cerrar</button>
+        </div>
+      )}
 
       {/* Search + Filters */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 space-y-3">
