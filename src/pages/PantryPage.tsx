@@ -44,44 +44,85 @@ export default function PantryPage() {
     const errors: string[] = [];
 
     try {
-      let rows: string[][];
+      // Cada elemento es un objeto { columna: valor } keyed por encabezado normalizado
+      let records: Record<string, string>[];
       const isExcel = /\.(xlsx|xls)$/i.test(file.name);
 
       if (isExcel) {
         const buffer = await file.arrayBuffer();
         const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const raw = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' });
-        rows = (raw as unknown[][])
-          .slice(1)
-          .map(r => r.map(c => {
-            if (c instanceof Date) return c.toISOString().split('T')[0];
-            return String(c ?? '').trim();
-          }))
-          .filter(r => r.some(c => c !== ''));
+        const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '', cellDates: true });
+        records = raw.map(row => {
+          const out: Record<string, string> = {};
+          for (const [k, v] of Object.entries(row)) {
+            const key = k.toLowerCase().trim().replace(/\s+/g, '_').replace(/[áa]/g, 'a').replace(/[éê]/g, 'e').replace(/[íi]/g, 'i').replace(/[óo]/g, 'o').replace(/[úu]/g, 'u');
+            out[key] = v instanceof Date ? v.toISOString().split('T')[0] : String(v ?? '').trim();
+          }
+          return out;
+        });
       } else {
-        // Strip BOM y detectar separador (coma o punto y coma)
         let text = await file.text();
-        text = text.replace(/^﻿/, '');
-        const nonEmptyLines = text.split(/\r?\n/).filter(l => l.trim());
-        const header = nonEmptyLines[0] ?? '';
+        text = text.replace(/^﻿/, ''); // strip BOM
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) {
+          setImportResult({ ok: 0, errors: ['El archivo está vacío o solo tiene encabezados.'] });
+          setImporting(false);
+          return;
+        }
+        const header = lines[0];
         const sep = header.includes(';') ? ';' : ',';
-        rows = nonEmptyLines
-          .slice(1)
-          .map(line => line.split(sep).map(c => c.trim()));
+        const headers = header.split(sep).map(h =>
+          h.toLowerCase().trim().replace(/\s+/g, '_')
+            .replace(/[á]/g, 'a').replace(/[é]/g, 'e').replace(/[í]/g, 'i').replace(/[ó]/g, 'o').replace(/[ú]/g, 'u')
+        );
+        records = lines.slice(1).map(line => {
+          const vals = line.split(sep).map(c => c.trim());
+          const out: Record<string, string> = {};
+          headers.forEach((h, i) => { out[h] = vals[i] ?? ''; });
+          return out;
+        }).filter(r => Object.values(r).some(v => v !== ''));
       }
 
-      if (rows.length === 0) {
+      if (records.length === 0) {
         setImportResult({ ok: 0, errors: ['El archivo está vacío o solo tiene encabezados.'] });
         setImporting(false);
         return;
       }
 
-      for (let i = 0; i < rows.length; i++) {
-        const [nombre, categoriaRaw, cantidad, unidadRaw, stockMinimo, vencimiento, ...notasParts] = rows[i];
+      // Verificar que existan las columnas mínimas requeridas
+      const firstRow = records[0];
+      const missingCols: string[] = [];
+      if (!('nombre' in firstRow)) missingCols.push('nombre');
+      if (!('categoria' in firstRow)) missingCols.push('categoria');
+      if (!('cantidad' in firstRow)) missingCols.push('cantidad');
+      if (!('unidad' in firstRow)) missingCols.push('unidad');
+      if (missingCols.length > 0) {
+        setImportResult({
+          ok: 0,
+          errors: [
+            `El archivo no tiene las columnas requeridas: ${missingCols.join(', ')}.`,
+            `Columnas encontradas: ${Object.keys(firstRow).join(', ')}.`,
+            'Descarga la plantilla Excel para ver el formato correcto.',
+          ],
+        });
+        setImporting(false);
+        return;
+      }
+
+      for (let i = 0; i < records.length; i++) {
+        const r = records[i];
         const lineNum = i + 2;
-        const categoria = (categoriaRaw ?? '').toLowerCase().trim() as Category;
-        const unidad = (unidadRaw ?? '').toLowerCase().trim() as Unit;
+        const nombre = r['nombre'] ?? '';
+        const categoriaRaw = r['categoria'] ?? '';
+        const cantidad = r['cantidad'] ?? '';
+        const unidadRaw = r['unidad'] ?? '';
+        const stockMinimo = r['stock_minimo'] ?? '';
+        const vencimiento = r['vencimiento'] ?? '';
+        const notas = r['notas'] ?? '';
+
+        const categoria = categoriaRaw.toLowerCase() as Category;
+        const unidad = unidadRaw.toLowerCase() as Unit;
 
         if (!nombre) { errors.push(`Fila ${lineNum}: nombre vacío.`); continue; }
         if (!VALID_CATEGORIES.includes(categoria)) {
@@ -107,7 +148,7 @@ export default function PantryPage() {
           minStock: min,
           usedQuantity: 0,
           expirationDate: vencimiento || undefined,
-          notes: notasParts.join(',') || undefined,
+          notes: notas || undefined,
         });
         ok++;
       }
