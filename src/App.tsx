@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PantryProvider } from './contexts/PantryContext';
 import Layout from './components/layout/Layout';
 import AuthPage from './pages/AuthPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import Dashboard from './pages/Dashboard';
 import PantryPage from './pages/PantryPage';
 import ShoppingPage from './pages/ShoppingPage';
@@ -44,6 +45,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/auth" element={<AuthPageGuard />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route element={<ProtectedRoutes />}>
             <Route path="/"         element={<Dashboard />}        />
             <Route path="/despensa" element={<PantryPage />}       />
