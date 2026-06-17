@@ -131,7 +131,7 @@ export default function PantryPage() {
         if (!UNITS.includes(unidad)) {
           errors.push(`Fila ${lineNum}: unidad "${unidadRaw}" inválida. Válidas: ${UNITS.join(', ')}.`); continue;
         }
-        const qty = parseFloat(cantidad);
+        const qty = cantidad ? parseFloat(cantidad) : 0;
         if (isNaN(qty)) {
           errors.push(`Fila ${lineNum}: cantidad "${cantidad}" no es un número.`); continue;
         }
