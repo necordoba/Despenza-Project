@@ -214,7 +214,7 @@ export default function AuthPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
 
             {/* Name */}
-            {!isLogin && (
+            {mode === 'register' && (
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">
                   Nombre completo
@@ -223,7 +223,7 @@ export default function AuthPage() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  required={!isLogin}
+                  required
                   placeholder="Ej: María García"
                   autoComplete="name"
                   className={inputCls}
