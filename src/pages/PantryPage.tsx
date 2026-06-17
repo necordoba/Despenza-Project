@@ -129,18 +129,17 @@ export default function PantryPage() {
           <p className="text-gray-500 text-sm mt-0.5">{products.length} producto{products.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex items-center gap-2">
-          {products.length > 0 && (
-            <button
-              onClick={async () => {
-                if (!confirm(`¿Eliminar los ${products.length} productos? Esta acción no se puede deshacer.`)) return;
-                await clearAllProducts();
-              }}
-              className="flex items-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              Vaciar despensa
-            </button>
-          )}
+          <button
+            onClick={async () => {
+              if (!confirm(`¿Eliminar los ${products.length} productos? Esta acción no se puede deshacer.`)) return;
+              await clearAllProducts();
+            }}
+            disabled={products.length === 0}
+            className="flex items-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Vaciar despensa
+          </button>
           <button
             onClick={downloadTemplate}
             title="Descargar plantilla CSV"
