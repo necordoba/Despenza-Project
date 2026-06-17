@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { Plus, Search, SlidersHorizontal, Package, Upload, FileDown, Trash2 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { usePantry } from '../contexts/PantryContext';
 import type { Product, Category, Unit } from '../types';
 import { CATEGORIES, UNITS, getExpirationStatus } from '../types';
@@ -9,19 +10,19 @@ import ProductForm from '../components/pantry/ProductForm';
 type Filter = 'todos' | 'bajo' | 'vencidos' | 'proximos';
 
 const VALID_CATEGORIES = Object.keys(CATEGORIES) as Category[];
-const CSV_TEMPLATE = `nombre,categoria,cantidad,unidad,stock_minimo,vencimiento,notas
-Arroz,granos,5000,g,2000,,
-Leche,lacteos,2,l,1,2025-12-31,Entera
-Acetaminofén,medicina,2,unidades,1,,`;
 
 function downloadTemplate() {
-  const blob = new Blob([CSV_TEMPLATE], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'plantilla_despensa.csv';
-  a.click();
-  URL.revokeObjectURL(url);
+  const wb = XLSX.utils.book_new();
+  const wsData = [
+    ['nombre', 'categoria', 'cantidad', 'unidad', 'stock_minimo', 'vencimiento', 'notas'],
+    ['Arroz', 'granos', 5000, 'g', 2000, '', ''],
+    ['Leche', 'lacteos', 2, 'l', 1, '2025-12-31', 'Entera'],
+    ['Acetaminofén', 'medicina', 2, 'unidades', 1, '', ''],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [{ wch: 20 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 24 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+  XLSX.writeFile(wb, 'plantilla_despensa.xlsx');
 }
 
 export default function PantryPage() {
@@ -32,54 +33,86 @@ export default function PantryPage() {
   const [importResult, setImportResult] = useState<{ ok: number; errors: string[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function handleCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!fileInputRef.current) return;
     fileInputRef.current.value = '';
     if (!file) return;
 
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
-    const rows = lines.slice(1);
-
-    if (rows.length === 0) {
-      setImportResult({ ok: 0, errors: ['El archivo está vacío o solo tiene encabezados.'] });
-      return;
-    }
-
     setImporting(true);
     let ok = 0;
     const errors: string[] = [];
 
-    for (let i = 0; i < rows.length; i++) {
-      const cols = rows[i].split(',').map(c => c.trim());
-      const [nombre, categoria, cantidad, unidad, stockMinimo, vencimiento, ...notasParts] = cols;
-      const lineNum = i + 2;
+    try {
+      let rows: string[][];
+      const isExcel = /\.(xlsx|xls)$/i.test(file.name);
 
-      if (!nombre) { errors.push(`Línea ${lineNum}: nombre vacío.`); continue; }
-      if (!VALID_CATEGORIES.includes(categoria as Category)) {
-        errors.push(`Línea ${lineNum}: categoría "${categoria}" inválida.`); continue;
-      }
-      if (!UNITS.includes(unidad as Unit)) {
-        errors.push(`Línea ${lineNum}: unidad "${unidad}" inválida.`); continue;
-      }
-      const qty = parseFloat(cantidad);
-      const min = parseFloat(stockMinimo);
-      if (isNaN(qty) || isNaN(min)) {
-        errors.push(`Línea ${lineNum}: cantidad o stock mínimo no es un número.`); continue;
+      if (isExcel) {
+        const buffer = await file.arrayBuffer();
+        const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' });
+        rows = (raw as unknown[][])
+          .slice(1)
+          .map(r => r.map(c => {
+            if (c instanceof Date) return c.toISOString().split('T')[0];
+            return String(c ?? '').trim();
+          }))
+          .filter(r => r.some(c => c !== ''));
+      } else {
+        // Strip BOM y detectar separador (coma o punto y coma)
+        let text = await file.text();
+        text = text.replace(/^﻿/, '');
+        const nonEmptyLines = text.split(/\r?\n/).filter(l => l.trim());
+        const header = nonEmptyLines[0] ?? '';
+        const sep = header.includes(';') ? ';' : ',';
+        rows = nonEmptyLines
+          .slice(1)
+          .map(line => line.split(sep).map(c => c.trim()));
       }
 
-      await addProduct({
-        name: nombre,
-        category: categoria as Category,
-        quantity: qty,
-        unit: unidad as Unit,
-        minStock: min,
-        usedQuantity: 0,
-        expirationDate: vencimiento || undefined,
-        notes: notasParts.join(',') || undefined,
-      });
-      ok++;
+      if (rows.length === 0) {
+        setImportResult({ ok: 0, errors: ['El archivo está vacío o solo tiene encabezados.'] });
+        setImporting(false);
+        return;
+      }
+
+      for (let i = 0; i < rows.length; i++) {
+        const [nombre, categoriaRaw, cantidad, unidadRaw, stockMinimo, vencimiento, ...notasParts] = rows[i];
+        const lineNum = i + 2;
+        const categoria = (categoriaRaw ?? '').toLowerCase().trim() as Category;
+        const unidad = (unidadRaw ?? '').toLowerCase().trim() as Unit;
+
+        if (!nombre) { errors.push(`Fila ${lineNum}: nombre vacío.`); continue; }
+        if (!VALID_CATEGORIES.includes(categoria)) {
+          errors.push(`Fila ${lineNum}: categoría "${categoriaRaw}" inválida. Válidas: ${VALID_CATEGORIES.join(', ')}.`); continue;
+        }
+        if (!UNITS.includes(unidad)) {
+          errors.push(`Fila ${lineNum}: unidad "${unidadRaw}" inválida. Válidas: ${UNITS.join(', ')}.`); continue;
+        }
+        const qty = parseFloat(cantidad);
+        if (isNaN(qty)) {
+          errors.push(`Fila ${lineNum}: cantidad "${cantidad}" no es un número.`); continue;
+        }
+        const min = stockMinimo ? parseFloat(stockMinimo) : 0;
+        if (isNaN(min)) {
+          errors.push(`Fila ${lineNum}: stock_minimo "${stockMinimo}" no es un número.`); continue;
+        }
+
+        await addProduct({
+          name: nombre,
+          category: categoria,
+          quantity: qty,
+          unit: unidad,
+          minStock: min,
+          usedQuantity: 0,
+          expirationDate: vencimiento || undefined,
+          notes: notasParts.join(',') || undefined,
+        });
+        ok++;
+      }
+    } catch (err) {
+      errors.push(`Error inesperado al leer el archivo: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     setImporting(false);
@@ -142,11 +175,11 @@ export default function PantryPage() {
           </button>
           <button
             onClick={downloadTemplate}
-            title="Descargar plantilla CSV"
+            title="Descargar plantilla Excel (.xlsx)"
             className="flex items-center gap-2 border border-gray-200 text-gray-600 hover:bg-gray-50 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
           >
             <FileDown className="w-4 h-4" />
-            Plantilla CSV
+            Plantilla Excel
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -154,7 +187,7 @@ export default function PantryPage() {
             className="flex items-center gap-2 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
           >
             <Upload className="w-4 h-4" />
-            {importing ? 'Importando...' : 'Importar CSV'}
+            {importing ? 'Importando...' : 'Importar archivo'}
           </button>
           <button
             onClick={() => setShowForm(true)}
@@ -170,9 +203,9 @@ export default function PantryPage() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".csv"
+        accept=".csv,.xlsx,.xls"
         className="hidden"
-        onChange={handleCsvFile}
+        onChange={handleImportFile}
       />
 
       {/* Import result banner */}
