@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import { Plus, Search, SlidersHorizontal, Package, Upload, FileDown, Trash2 } from 'lucide-react';
+import { Plus, Search, SlidersHorizontal, Package, Upload, FileDown, Trash2, Info } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { usePantry } from '../contexts/PantryContext';
 import type { Product, Category, Unit } from '../types';
@@ -52,7 +52,7 @@ export default function PantryPage() {
         const buffer = await file.arrayBuffer();
         const wb = XLSX.read(buffer, { type: 'array', cellDates: true });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '', cellDates: true });
+        const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' });
         records = raw.map(row => {
           const out: Record<string, string> = {};
           for (const [k, v] of Object.entries(row)) {
@@ -222,14 +222,23 @@ export default function PantryPage() {
             <FileDown className="w-4 h-4" />
             Plantilla Excel
           </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
-            className="flex items-center gap-2 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-          >
-            <Upload className="w-4 h-4" />
-            {importing ? 'Importando...' : 'Importar archivo'}
-          </button>
+          <div className="relative group">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              className="flex items-center gap-2 border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              {importing ? 'Importando...' : 'Importar archivo'}
+              <Info className="w-3.5 h-3.5 opacity-50" />
+            </button>
+            <div className="absolute right-0 top-full mt-2 w-72 bg-gray-900 text-white text-xs rounded-xl p-3 hidden group-hover:block z-20 shadow-lg pointer-events-none">
+              <p className="font-semibold mb-1">Formato requerido</p>
+              <p className="text-gray-300 mb-2">El archivo debe tener estas columnas (en cualquier orden):</p>
+              <p className="font-mono bg-gray-800 rounded px-2 py-1 text-gray-200 mb-2">nombre · categoria · cantidad · unidad</p>
+              <p className="text-gray-400">Usa <span className="text-emerald-400 font-semibold">Plantilla Excel</span> para descargar el formato correcto. Se aceptan archivos .xlsx, .xls y .csv.</p>
+            </div>
+          </div>
           <button
             onClick={() => setShowForm(true)}
             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
@@ -255,8 +264,20 @@ export default function PantryPage() {
           <p className="font-semibold mb-1">
             {importResult.ok} producto{importResult.ok !== 1 ? 's' : ''} importado{importResult.ok !== 1 ? 's' : ''} correctamente.
           </p>
-          {importResult.errors.map((e, i) => <p key={i} className="text-xs">{e}</p>)}
-          <button onClick={() => setImportResult(null)} className="text-xs underline mt-1">Cerrar</button>
+          {importResult.errors.map((e, i) => <p key={i} className="text-xs mt-0.5">{e}</p>)}
+          {importResult.ok === 0 && importResult.errors.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-amber-200 flex items-center gap-3">
+              <p className="text-xs text-amber-700">¿Tu archivo tiene un formato diferente?</p>
+              <button
+                onClick={downloadTemplate}
+                className="flex items-center gap-1.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                Descargar plantilla Excel
+              </button>
+            </div>
+          )}
+          <button onClick={() => setImportResult(null)} className="text-xs underline mt-2 opacity-70">Cerrar</button>
         </div>
       )}
 
