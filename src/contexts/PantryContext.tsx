@@ -12,6 +12,7 @@ interface PantryContextType {
   addProduct: (data: Omit<Product, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateProduct: (id: string, data: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
+  clearAllProducts: () => Promise<void>;
   resetUsage: (id: string) => Promise<void>;
   addShoppingItem: (data: { name: string; quantity: number; unit: Unit; productId?: string }) => Promise<void>;
   toggleShoppingItem: (id: string, checked: boolean) => Promise<void>;
@@ -159,6 +160,11 @@ export function PantryProvider({ children }: { children: ReactNode }) {
     await supabase.from('products').delete().eq('id', id);
   }, []);
 
+  const clearAllProducts = useCallback(async () => {
+    if (!user) return;
+    await supabase.from('products').delete().eq('user_id', user.id);
+  }, [user]);
+
   // Reset the usage counter for a single product
   const resetUsage = useCallback(async (id: string) => {
     await supabase.from('products').update({
@@ -239,7 +245,7 @@ export function PantryProvider({ children }: { children: ReactNode }) {
   return (
     <PantryContext.Provider value={{
       products, shopping, loadingProducts,
-      addProduct, updateProduct, deleteProduct, resetUsage,
+      addProduct, updateProduct, deleteProduct, clearAllProducts, resetUsage,
       addShoppingItem, toggleShoppingItem, deleteShoppingItem,
       clearCheckedItems, generateShoppingList,
     }}>
