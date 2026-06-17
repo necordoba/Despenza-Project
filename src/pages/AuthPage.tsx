@@ -8,16 +8,22 @@ const ERROR_MAP: Record<string, string> = {
   'Invalid login credentials':     'Correo o contraseña incorrectos.',
   'Email not confirmed':           'Confirma tu correo antes de entrar.',
   'User already registered':       'Ese correo ya tiene una cuenta. Inicia sesión.',
+  'already registered':            'Ese correo ya tiene una cuenta. Inicia sesión.',
+  'already been registered':       'Ese correo ya tiene una cuenta. Inicia sesión.',
+  'Email address already':         'Ese correo ya tiene una cuenta. Inicia sesión.',
   'Password should be at least 6': 'La contraseña debe tener al menos 6 caracteres.',
   'Unable to validate email':      'Correo electrónico inválido.',
   'signup_disabled':               'El registro está desactivado.',
+  'Email rate limit':              'Demasiados intentos. Espera unos minutos.',
+  'over_email_send_rate_limit':    'Demasiados intentos. Espera unos minutos.',
+  'For security purposes':         'Por seguridad, espera unos segundos antes de intentar nuevamente.',
 };
 
 function mapError(msg: string) {
   for (const [key, val] of Object.entries(ERROR_MAP)) {
-    if (msg.includes(key)) return val;
+    if (msg.toLowerCase().includes(key.toLowerCase())) return val;
   }
-  return 'Ocurrió un error. Intenta nuevamente.';
+  return `Error: ${msg}`;
 }
 
 function StrengthBar({ password }: { password: string }) {
