@@ -20,16 +20,23 @@ export default function ProductCard({ product, onEdit }: Props) {
   const isLowStock = product.quantity <= product.minStock;
 
   const expBadge = {
-    expired:  { text: 'Vencido',         cls: 'bg-red-100 text-red-700'     },
-    critical: { text: days === 0 ? 'Vence hoy' : `Vence en ${days}d`, cls: 'bg-red-100 text-red-700'     },
-    warning:  { text: `Vence en ${days}d`, cls: 'bg-amber-100 text-amber-700' },
-    ok:       { text: `Vence en ${days}d`, cls: 'bg-green-100 text-green-700' },
+    expired:  { text: 'Vencido',                                  cls: 'bg-red-100 text-red-700 border-red-200'      },
+    critical: { text: days === 0 ? 'Vence hoy' : `${days}d`,     cls: 'bg-red-100 text-red-700 border-red-200'      },
+    warning:  { text: `Vence en ${days}d`,                        cls: 'bg-amber-100 text-amber-700 border-amber-200' },
+    ok:       { text: `Vence en ${days}d`,                        cls: 'bg-green-100 text-green-700 border-green-200' },
     none:     null,
   }[expStatus];
 
+  const borderCls =
+    expStatus === 'expired' || expStatus === 'critical'
+      ? '0 0 0 1.5px #fca5a5'
+      : isLowStock
+      ? '0 0 0 1.5px #fde68a'
+      : '0 0 0 1px rgba(0,0,0,0.07)';
+
   async function adjust(delta: number) {
     const newQty = Math.max(0, product.quantity + delta);
-    const actualReduction = product.quantity - newQty; // > 0 only when stock goes down
+    const actualReduction = product.quantity - newQty;
     setAdjusting(true);
     await updateProduct(product.id, {
       quantity:     newQty,
@@ -55,105 +62,91 @@ export default function ProductCard({ product, onEdit }: Props) {
 
   return (
     <div
-      className={`bg-white rounded-xl border transition-shadow p-4 flex flex-col gap-3 ${
-        expStatus === 'expired' || expStatus === 'critical'
-          ? 'border-red-200'
-          : isLowStock
-          ? 'border-amber-200'
-          : 'border-gray-100'
-      }`}
-      style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}
+      className="bg-white rounded-2xl overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-0.5"
+      style={{ boxShadow: `0 2px 8px rgba(0,0,0,0.06), ${borderCls}` }}
     >
-      {/* Top row */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <span
-            className="text-2xl w-11 h-11 flex items-center justify-center rounded-xl shrink-0"
-            style={{ background: cat.bg }}
-          >
-            {cat.emoji}
-          </span>
-          <div className="min-w-0">
-            <p className="font-semibold text-gray-900 text-[15px] leading-tight truncate">{product.name}</p>
-            <span
-              className="inline-block text-[12px] px-2 py-0.5 rounded-full font-medium mt-1"
-              style={{ background: cat.bg, color: cat.color }}
-            >
-              {cat.label}
-            </span>
-          </div>
+      {/* Category header strip */}
+      <div className="px-4 pt-4 pb-3 flex items-start gap-3" style={{ background: cat.bg }}>
+        <span className="text-3xl leading-none mt-0.5 shrink-0">{cat.emoji}</span>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-gray-900 text-[15px] leading-snug truncate">{product.name}</p>
+          <span className="text-xs font-semibold" style={{ color: cat.color }}>{cat.label}</span>
         </div>
-
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-0.5 shrink-0 -mr-1">
           <button
             onClick={() => onEdit(product)}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-white/70 transition-colors"
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleDelete}
             disabled={deleting}
-            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50/80 transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Quantity controls */}
-      <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
-        <button
-          onClick={() => adjust(-1)}
-          disabled={adjusting || product.quantity === 0}
-          className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-gray-200 hover:bg-gray-100 disabled:opacity-40 transition-colors"
-        >
-          <Minus className="w-3 h-3" />
-        </button>
-        <div className="text-center">
-          <span className={`text-lg font-bold ${isLowStock ? 'text-red-600' : 'text-gray-900'}`}>
-            {product.quantity}
-          </span>
-          <span className="text-xs text-gray-400 ml-1">{product.unit}</span>
+      {/* Body */}
+      <div className="px-4 pt-3 pb-4 flex flex-col gap-3 flex-1">
+        {/* Quantity controls */}
+        <div className="flex items-center bg-gray-50 rounded-xl p-1 gap-1">
+          <button
+            onClick={() => adjust(-1)}
+            disabled={adjusting || product.quantity === 0}
+            className="w-9 h-9 flex items-center justify-center rounded-lg bg-white text-red-400 hover:bg-red-50 hover:text-red-600 shadow-sm transition-all disabled:opacity-30 disabled:shadow-none"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <div className="flex-1 text-center">
+            <span className={`text-xl font-extrabold ${isLowStock ? 'text-red-600' : 'text-gray-900'}`}>
+              {product.quantity}
+            </span>
+            <span className="text-xs text-gray-400 ml-1">{product.unit}</span>
+          </div>
+          <button
+            onClick={() => adjust(1)}
+            disabled={adjusting}
+            className="w-9 h-9 flex items-center justify-center rounded-lg bg-white text-emerald-600 hover:bg-emerald-50 shadow-sm transition-all disabled:opacity-30 disabled:shadow-none"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
         </div>
-        <button
-          onClick={() => adjust(1)}
-          disabled={adjusting}
-          className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-gray-200 hover:bg-gray-100 disabled:opacity-40 transition-colors"
-        >
-          <Plus className="w-3 h-3" />
-        </button>
-      </div>
 
-      {/* Badges */}
-      <div className="flex flex-wrap gap-1.5">
+        {/* Status badges */}
+        {(isLowStock || expBadge) && (
+          <div className="flex flex-wrap gap-1.5">
+            {isLowStock && (
+              <span className="text-xs bg-red-50 text-red-600 border border-red-200 px-2.5 py-0.5 rounded-full font-semibold">
+                Stock bajo
+              </span>
+            )}
+            {expBadge && (
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${expBadge.cls}`}>
+                {expBadge.text}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Notes */}
+        {product.notes && (
+          <p className="text-xs text-gray-400 truncate">{product.notes}</p>
+        )}
+
+        {/* Add to shopping */}
         {isLowStock && (
-          <span className="text-xs bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full font-medium">
-            Stock bajo
-          </span>
-        )}
-        {expBadge && (
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${expBadge.cls}`}>
-            {expBadge.text}
-          </span>
+          <button
+            onClick={addToShopping}
+            className="mt-auto flex items-center justify-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl py-2 transition-colors font-semibold"
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+            Agregar a compras
+          </button>
         )}
       </div>
-
-      {/* Notes */}
-      {product.notes && (
-        <p className="text-xs text-gray-400 truncate">{product.notes}</p>
-      )}
-
-      {/* Add to shopping */}
-      {isLowStock && (
-        <button
-          onClick={addToShopping}
-          className="flex items-center justify-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-xl py-1.5 transition-colors font-medium"
-        >
-          <ShoppingCart className="w-3.5 h-3.5" />
-          Agregar a compras
-        </button>
-      )}
     </div>
   );
 }

@@ -199,8 +199,8 @@ export default function PantryPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Despensa</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{products.length} producto{products.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-3xl font-extrabold text-gray-900">Despensa</h1>
+          <p className="text-gray-400 text-sm mt-0.5">{products.length} producto{products.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -209,7 +209,7 @@ export default function PantryPage() {
               await clearAllProducts();
             }}
             disabled={products.length === 0}
-            className="flex items-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            className="flex items-center gap-2 border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
           >
             <Trash2 className="w-4 h-4" />
             Vaciar despensa
@@ -217,7 +217,7 @@ export default function PantryPage() {
           <button
             onClick={downloadTemplate}
             title="Descargar plantilla Excel (.xlsx)"
-            className="flex items-center gap-2 border border-gray-200 text-gray-600 hover:bg-gray-50 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            className="flex items-center gap-2 border border-gray-200 text-gray-600 hover:bg-white hover:border-gray-300 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
           >
             <FileDown className="w-4 h-4" />
             Plantilla Excel
@@ -241,7 +241,8 @@ export default function PantryPage() {
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            style={{ boxShadow: '0 2px 8px rgba(5,150,105,0.35)' }}
           >
             <Plus className="w-4 h-4" />
             Agregar producto

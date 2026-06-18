@@ -46,7 +46,7 @@ export default function ResetPasswordPage() {
           <div className="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center">
             <Leaf className="w-5 h-5 text-white" />
           </div>
-          <span className="text-gray-900 font-bold text-xl">Freshly App</span>
+          <span className="text-gray-900 font-bold text-xl">Alacena</span>
         </div>
 
         <div className="mb-8">

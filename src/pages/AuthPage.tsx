@@ -116,7 +116,7 @@ export default function AuthPage() {
             <div className="w-11 h-11 bg-white/15 backdrop-blur rounded-2xl flex items-center justify-center">
               <Leaf className="w-6 h-6 text-emerald-200" />
             </div>
-            <span className="text-white font-bold text-xl tracking-tight">Freshly App</span>
+            <span className="text-white font-bold text-xl tracking-tight">Alacena</span>
           </div>
 
           {/* Main copy */}
@@ -144,7 +144,7 @@ export default function AuthPage() {
             </ul>
           </div>
 
-          <p className="text-emerald-600 text-sm">© 2025 Freshly App</p>
+          <p className="text-emerald-600 text-sm">© 2025 Alacena</p>
         </div>
       </div>
 
@@ -157,7 +157,7 @@ export default function AuthPage() {
             <div className="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center">
               <Leaf className="w-5 h-5 text-white" />
             </div>
-            <span className="text-gray-900 font-bold text-xl">Freshly App</span>
+            <span className="text-gray-900 font-bold text-xl">Alacena</span>
           </div>
 
           {/* Heading */}
@@ -314,7 +314,7 @@ export default function AuthPage() {
                   </>
                 ) : (
                   <>
-                    {isLogin ? 'Entrar a Freshly App' : isForgot ? 'Enviar enlace' : 'Crear cuenta gratis'}
+                    {isLogin ? 'Entrar a Alacena' : isForgot ? 'Enviar enlace' : 'Crear cuenta gratis'}
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}

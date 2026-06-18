@@ -152,8 +152,12 @@ export function PantryProvider({ children }: { children: ReactNode }) {
         await supabase.from('products').update(base).eq('id', id);
       } else {
         console.error('updateProduct error:', error.message);
+        return;
       }
     }
+
+    // Update local state immediately so Consumo tab reflects the change right away
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, ...data } : p));
   }, []);
 
   const deleteProduct = useCallback(async (id: string) => {
@@ -171,6 +175,7 @@ export function PantryProvider({ children }: { children: ReactNode }) {
       used_quantity: 0,
       updated_at: new Date().toISOString(),
     }).eq('id', id);
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, usedQuantity: 0 } : p));
   }, []);
 
   const addShoppingItem = useCallback(
