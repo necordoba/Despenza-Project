@@ -136,6 +136,21 @@ export default function ProductCard({ product, onEdit }: Props) {
           <p className="text-xs text-gray-400 truncate">{product.notes}</p>
         )}
 
+        {/* Stock level bar */}
+        <div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min(100, product.minStock > 0 ? (product.quantity / (product.minStock * 2)) * 100 : 100)}%`,
+                background: isLowStock
+                  ? 'linear-gradient(90deg, #ef4444, #f87171)'
+                  : 'linear-gradient(90deg, #059669, #34d399)',
+              }}
+            />
+          </div>
+        </div>
+
         {/* Add to shopping */}
         {isLowStock && (
           <button

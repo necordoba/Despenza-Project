@@ -55,10 +55,12 @@ export default function ConsumptionPage() {
 
       {/* List */}
       {usedProducts.length === 0 ? (
-        <div className="text-center py-24 text-gray-400">
-          <BarChart2 className="w-14 h-14 mx-auto mb-3 opacity-20" />
-          <p className="text-lg font-medium text-gray-500">Sin consumo registrado</p>
-          <p className="text-sm mt-1">
+        <div className="text-center py-24">
+          <div className="w-16 h-16 bg-gray-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
+            <BarChart2 className="w-8 h-8 text-gray-300" />
+          </div>
+          <p className="text-lg font-semibold text-gray-500">Sin consumo registrado</p>
+          <p className="text-sm text-gray-400 mt-1 max-w-xs mx-auto">
             Cada vez que reduces el stock de un producto, se registra aquí
           </p>
         </div>
@@ -66,16 +68,27 @@ export default function ConsumptionPage() {
         <div className="space-y-2">
           {usedProducts.map((p, i) => {
             const cat = CATEGORIES[p.category];
+            const maxUsage = usedProducts[0].usedQuantity;
+            const barPct = Math.round((p.usedQuantity / maxUsage) * 100);
+            const rankColors = ['#f59e0b', '#94a3b8', '#cd7c4c'];
+            const rankBgs   = ['#fef3c7', '#f1f5f9', '#fdf0e8'];
+            const isTop3 = i < 3;
             return (
               <div
                 key={p.id}
-                className="bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-4"
-                style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}
+                className="bg-white rounded-2xl px-4 py-3.5 flex items-center gap-4 group"
+                style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)' }}
               >
-                {/* Rank */}
-                <span className="text-xs font-bold text-gray-300 w-5 text-center shrink-0">
+                {/* Rank badge */}
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-black"
+                  style={isTop3
+                    ? { background: rankBgs[i], color: rankColors[i] }
+                    : { background: '#f8fafc', color: '#cbd5e1' }
+                  }
+                >
                   {i + 1}
-                </span>
+                </div>
 
                 {/* Emoji */}
                 <span
@@ -85,28 +98,36 @@ export default function ConsumptionPage() {
                   {cat.emoji}
                 </span>
 
-                {/* Info */}
+                {/* Info + bar */}
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-[15px] text-gray-900 truncate">{p.name}</p>
-                  <span
-                    className="inline-block text-[12px] px-2 py-0.5 rounded-full font-medium mt-0.5"
-                    style={{ background: cat.bg, color: cat.color }}
-                  >
-                    {cat.label}
-                  </span>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${barPct}%`,
+                          background: i === 0
+                            ? 'linear-gradient(90deg, #059669, #10b981)'
+                            : 'linear-gradient(90deg, #6ee7b7, #a7f3d0)',
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-400 shrink-0">{barPct}%</span>
+                  </div>
                 </div>
 
                 {/* Usage amount */}
                 <div className="text-right shrink-0">
-                  <p className="text-lg font-bold text-emerald-600">{p.usedQuantity}</p>
-                  <p className="text-xs text-gray-400">{p.unit}</p>
+                  <p className="text-lg font-black text-emerald-600 leading-none">{p.usedQuantity}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{p.unit}</p>
                 </div>
 
                 {/* Reset button */}
                 <button
                   onClick={() => resetUsage(p.id)}
                   title="Reiniciar contador"
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-300 hover:text-gray-500 transition-colors shrink-0"
+                  className="p-2 rounded-lg text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
                 >
                   <RotateCcw className="w-4 h-4" />
                 </button>
