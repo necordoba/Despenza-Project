@@ -134,7 +134,7 @@ export function PantryProvider({ children }: { children: ReactNode }) {
       ...(data.unit            !== undefined && { unit:            data.unit }),
       ...(data.minStock        !== undefined && { min_stock:       data.minStock }),
       ...(data.expirationDate  !== undefined && { expiration_date: data.expirationDate ?? null }),
-      ...(data.notes           !== undefined && { notes:           data.notes ?? null }),
+      ...(data.notes           !== undefined && { notes:           data.notes || null }),
       updated_at: new Date().toISOString(),
     };
 

@@ -37,9 +37,9 @@ export const CATEGORIES: Record<Category, { label: string; color: string; bg: st
   otros:       { label: 'Otros',       color: '#64748b', bg: '#f8fafc', emoji: '📦' },
 };
 
-export type Unit = 'unidades' | 'kg' | 'g' | 'l' | 'ml' | 'paquetes' | 'latas' | 'botellas' | 'cajas' | 'tarros';
+export type Unit = 'unidades' | 'kg' | 'g' | 'lb' | 'l' | 'ml' | 'paquetes' | 'latas' | 'botellas' | 'cajas' | 'tarros';
 
-export const UNITS: Unit[] = ['unidades', 'kg', 'g', 'l', 'ml', 'paquetes', 'latas', 'botellas', 'cajas', 'tarros'];
+export const UNITS: Unit[] = ['unidades', 'kg', 'g', 'lb', 'l', 'ml', 'paquetes', 'latas', 'botellas', 'cajas', 'tarros'];
 
 export interface Product {
   id: string;

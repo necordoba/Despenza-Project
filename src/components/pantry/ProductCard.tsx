@@ -36,7 +36,7 @@ export default function ProductCard({ product, onEdit }: Props) {
 
   async function adjust(delta: number) {
     const newQty = Math.max(0, product.quantity + delta);
-    const actualReduction = product.quantity - newQty;
+    const actualReduction = Math.max(0, product.quantity - newQty);
     setAdjusting(true);
     await updateProduct(product.id, {
       quantity:     newQty,

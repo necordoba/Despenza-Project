@@ -12,9 +12,9 @@ interface Props {
 const defaultForm = {
   name:           '',
   category:       'otros' as Category,
-  quantity:       1,
+  quantity:       '1',
   unit:           'unidades' as Unit,
-  minStock:       1,
+  minStock:       '1',
   expirationDate: '',
   notes:          '',
 };
@@ -29,9 +29,9 @@ export default function ProductForm({ product, onClose }: Props) {
       setForm({
         name:           product.name,
         category:       product.category,
-        quantity:       product.quantity,
+        quantity:       String(product.quantity),
         unit:           product.unit,
-        minStock:       product.minStock,
+        minStock:       String(product.minStock),
         expirationDate: product.expirationDate ?? '',
         notes:          product.notes ?? '',
       });
@@ -46,19 +46,31 @@ export default function ProductForm({ product, onClose }: Props) {
     e.preventDefault();
     setLoading(true);
     try {
-      const data = {
-        name:           form.name.trim(),
-        category:       form.category,
-        quantity:       Number(form.quantity),
-        unit:           form.unit,
-        minStock:       Number(form.minStock),
-        expirationDate: form.expirationDate || undefined,
-        notes:          form.notes.trim() || undefined,
-      };
+      const qty  = parseFloat(form.quantity)  || 0;
+      const min  = parseFloat(form.minStock)  || 0;
+      const notes = form.notes.trim() || null;
+      const expirationDate = form.expirationDate || null;
       if (product) {
-        await updateProduct(product.id, data);
+        await updateProduct(product.id, {
+          name:           form.name.trim(),
+          category:       form.category,
+          quantity:       qty,
+          unit:           form.unit,
+          minStock:       min,
+          expirationDate: form.expirationDate || undefined,
+          notes:          form.notes.trim(),  // empty string signals "clear the note"
+        });
       } else {
-        await addProduct(data);
+        await addProduct({
+          name:           form.name.trim(),
+          category:       form.category,
+          quantity:       qty,
+          unit:           form.unit,
+          minStock:       min,
+          usedQuantity:   0,
+          expirationDate: expirationDate ?? undefined,
+          notes:          notes ?? undefined,
+        });
       }
       onClose();
     } finally {
@@ -124,7 +136,7 @@ export default function ProductForm({ product, onClose }: Props) {
               <input
                 type="number"
                 value={form.quantity}
-                onChange={(e) => set('quantity', Number(e.target.value))}
+                onChange={(e) => set('quantity', e.target.value)}
                 required
                 min={0}
                 step="0.1"
@@ -151,7 +163,7 @@ export default function ProductForm({ product, onClose }: Props) {
             <input
               type="number"
               value={form.minStock}
-              onChange={(e) => set('minStock', Number(e.target.value))}
+              onChange={(e) => set('minStock', e.target.value)}
               min={0}
               step="0.1"
               className={inputCls}
